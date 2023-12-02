@@ -81,9 +81,10 @@ public class peerProcess {
                 Client client = new Client(peers.get(peerID), entry.getValue());
                 client.connect();
                 logger.tcpConnect(peerID, currPeerID);
+                logger.connect(peerID, currPeerID);
             }
         }
-        // peers.get(peerID).startChokeThread();
+        peers.get(peerID).startChokeThread();
         // peers.get(peerID).unchokePeer();
     }
 }
