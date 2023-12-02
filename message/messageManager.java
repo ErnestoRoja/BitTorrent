@@ -7,22 +7,22 @@ import peer.Peer;
 //import main.java.com.bittorrent.message.MessageCreator;
 // have compile message creator first
 
-public class MessageHandler implements Runnable{
+public class messageManager implements Runnable{
     private Peer peer;
     private int targetPeerId;
     private ObjectInputStream inputStream;
     private ObjectOutputStream outputStream;
     private Socket socket;
-    private MessageCreator creator;
+    private messageFactory creator;
     // private WritingLog logger;
 
 
-    public MessageHandler(ObjectInputStream inputStream, ObjectOutputStream outputStream, Peer peer, Socket socket){
+    public messageManager(ObjectInputStream inputStream, ObjectOutputStream outputStream, Peer peer, Socket socket){
         this.inputStream = inputStream;
         this.outputStream = outputStream;
         this.peer = peer;
         this.socket = socket;
-        creator = new MessageCreator();
+        creator = new messageFactory();
         //logger = new WritingLog(peer);
     }
 

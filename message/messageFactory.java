@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.BitSet;
 
-public class MessageCreator {
+public class messageFactory {
     public byte[] handshakeMessage(int peerId) throws IOException {
 
         byte[] handshakeMessage = new byte[32];
