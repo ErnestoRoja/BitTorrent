@@ -30,6 +30,14 @@ public class peerProcess {
         }
     }
 
+    public void startServer(Peer peer) {
+        System.out.println("Starting server thread for:" + peer.peerID);
+        Server server = new Server(peer);
+        Thread serverThread = new Thread(server);
+        serverThread.start();
+    }
+
+
     public static void main(String arg[]) throws FileNotFoundException {
 
         // Used to access the PeerInfo.cfg file from the project's 'Resource' folder
