@@ -31,7 +31,7 @@ public class peerProcess {
     }
 
     public void startServer(Peer peer) {
-        System.out.println("Starting server thread for:" + peer.peerID);
+        System.out.println("Starting server thread for: " + peer.peerID);
         Server server = new Server(peer);
         Thread serverThread = new Thread(server);
         serverThread.start();
@@ -66,20 +66,18 @@ public class peerProcess {
         );
 
         // Starts the server for this peer
-        Server server = new Server(peers.get(peerID));
-        Thread serverThread = new Thread(server);
-        serverThread.start();
+        instance.startServer(peers.get(peerID));
 
-        for (Map.Entry<Integer, Peer> entry : peers.entrySet()) {
-            int currPeerID = entry.getKey();
+        // for (Map.Entry<Integer, Peer> entry : peers.entrySet()) {
+        //     int currPeerID = entry.getKey();
 
-            if (currPeerID < peerID) {
-                Client client = new Client(peers.get(peerID), entry.getValue());
-                client.connect();
-                logger.tcpConnect(peerID, currPeerID);
-            }
-        }
-        peers.get(peerID).startChokeThread();
-        peers.get(peerID).unchokePeer();
+        //     if (currPeerID < peerID) {
+        //         Client client = new Client(peers.get(peerID), entry.getValue());
+        //         client.connect();
+        //         logger.tcpConnect(peerID, currPeerID);
+        //     }
+        // }
+        // peers.get(peerID).startChokeThread();
+        // peers.get(peerID).unchokePeer();
     }
 }

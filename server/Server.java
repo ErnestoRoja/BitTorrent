@@ -21,9 +21,9 @@ public class Server implements Runnable {
     }
 
     public void run() {
-        System.out.println("Starting server thread in server");
         ServerSocket listener = null;
         try {
+            System.out.println("ListeningPort being used: " + peer.listeningPort);
             listener = new ServerSocket(peer.listeningPort);
         } catch (IOException e) {
             System.out.println("Error creating server socket");
