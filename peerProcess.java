@@ -66,9 +66,11 @@ public class peerProcess {
         );
 
         // Starts the server for this peer
-        Server server = new Server(peers.get(peerID));
-        Thread serverThread = new Thread(server);
-        serverThread.start();
+        // Server server = new Server(peers.get(peerID));
+        // Thread serverThread = new Thread(server);
+        // serverThread.start();
+
+        instance.startServer(peers.get(peerID));
 
         for (Map.Entry<Integer, Peer> entry : peers.entrySet()) {
             int currPeerID = entry.getKey();
