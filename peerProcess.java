@@ -37,18 +37,9 @@ public class peerProcess {
         serverThread.start();
     }
 
-
-    public static void main(String arg[]) throws FileNotFoundException {
-
-        // Used to access the PeerInfo.cfg file from the project's 'Resource' folder
-        peerProcess instance = new peerProcess();
-        instance.parsePeerInfoConfig();
-
-        int peerID = Integer.parseInt(arg[0]);
-        peers.get(peerID).setManager(peers);
-        peers.get(peerID).readDownloadedFile();
-
-        WritingLogger logger = new WritingLogger(peers.get(peerID));
+    public void setLogger(Peer peer) {
+        WritingLogger logger = new WritingLogger(peer);
+        int peerID = peer.peerID;
 
         logger.setVariables(
                 peerID,
@@ -64,11 +55,20 @@ public class peerProcess {
                 peers.get(peerID).pieceSize,
                 peers.get(peerID).numPieces
         );
+    }
 
-        // Starts the server for this peer
-        // Server server = new Server(peers.get(peerID));
-        // Thread serverThread = new Thread(server);
-        // serverThread.start();
+
+    public static void main(String arg[]) throws FileNotFoundException {
+
+        // Used to access the PeerInfo.cfg file from the project's 'Resource' folder
+        peerProcess instance = new peerProcess();
+        instance.parsePeerInfoConfig();
+
+        int peerID = Integer.parseInt(arg[0]);
+        peers.get(peerID).setManager(peers);
+        peers.get(peerID).readDownloadedFile();
+
+        instance.setLogger(peers.get(peerID));
 
         instance.startServer(peers.get(peerID));
 
@@ -78,10 +78,10 @@ public class peerProcess {
             if (currPeerID < peerID) {
                 Client client = new Client(peers.get(peerID), entry.getValue());
                 client.connect();
-                logger.tcpConnect(peerID, currPeerID);
+                //logger.tcpConnect(peerID, currPeerID);
             }
         }
-        peers.get(peerID).startChokeThread();
-        peers.get(peerID).unchokePeer();
+        // peers.get(peerID).startChokeThread();
+        // peers.get(peerID).unchokePeer();
     }
 }
