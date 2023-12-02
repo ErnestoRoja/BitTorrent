@@ -1,4 +1,7 @@
 # P2P File Sharing System
+IMPORTANT NOTE: The original repository can be found at 'https://github.com/ErnestoRoja/BitTorrent-Clone'.
+We decided to move to a VSCode Java environment since the Maven structure was providing continuous roadblocks.
+Please consider the past contributions made to the original repository!
 
 ## Prerequites
 Before compiling this project, ensure that you have the following prerequisites installed on your system.
@@ -18,3 +21,4 @@ Before compiling this project, ensure that you have the following prerequisites 
 - Ernesto Roja
 - Robert Fontan
 - Frank Sabates
+
