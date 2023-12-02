@@ -7,6 +7,7 @@ import client.Client;
 
 public class peerProcess {
     public static Hashtable<Integer, Peer> peers = new Hashtable<Integer, Peer>();
+    static WritingLogger logger;
 
     public void parsePeerInfoConfig() {
         ClassLoader classLoader = getClass().getClassLoader();
@@ -31,14 +32,14 @@ public class peerProcess {
     }
 
     public void startServer(Peer peer) {
-        System.out.println("Starting server thread for:" + peer.peerID);
+        System.out.println("Starting server thread for: " + peer.peerID);
         Server server = new Server(peer);
         Thread serverThread = new Thread(server);
         serverThread.start();
     }
 
     public void setLogger(Peer peer) {
-        WritingLogger logger = new WritingLogger(peer);
+        logger = new WritingLogger(peer);
         int peerID = peer.peerID;
 
         logger.setVariables(
@@ -74,11 +75,12 @@ public class peerProcess {
 
         for (Map.Entry<Integer, Peer> entry : peers.entrySet()) {
             int currPeerID = entry.getKey();
-
+            
+            // Assuming that the peerID's are in increasing order within the config files
             if (currPeerID < peerID) {
                 Client client = new Client(peers.get(peerID), entry.getValue());
                 client.connect();
-                //logger.tcpConnect(peerID, currPeerID);
+                logger.tcpConnect(peerID, currPeerID);
             }
         }
         // peers.get(peerID).startChokeThread();
