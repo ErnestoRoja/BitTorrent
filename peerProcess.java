@@ -71,7 +71,7 @@ public class peerProcess {
                 logger.tcpConnect(peerID, currPeerID);
             }
         }
-        peers.get(peerID).peerChokeTracker();
-        peers.get(peerID).startOptimisticallyUnchokingPeer();
+        peers.get(peerID).startChokeThread();
+        peers.get(peerID).unchokePeer();
     }
 }

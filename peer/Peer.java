@@ -77,11 +77,11 @@ public class Peer {
         this.pieceSize = Integer.parseInt(prop.getProperty("PieceSize"));
         System.out.println("PieceSize " + this.pieceSize);
         
-        //Here we calculate the number of pieces in the file
+        // Calculate the number of pieces in the file
         double result = (double)this.fileSize/this.pieceSize;
         this.numPieces = (int)Math.ceil(result);
 
-        //Storing the data of the file in Common.cfg
+        // Stores Common.cfg's data
         InputStream input2 = classLoader.getResourceAsStream("./resources/" + fileName);
         try {
             this.file = input2.readAllBytes();
@@ -119,8 +119,7 @@ public class Peer {
         // Initialize fileOutputStream to null to ensure it can be closed safely in the 'finally' block.
         FileOutputStream fileOutputStream = null;
 
-        //String workingDir = System.getProperty("user.dir");
-        //creates a subDirectory for the peer with it's peerID
+        // Creates a subDirectory for the peer with it's peerID
         String directoryPath = "./peer_info" + "/peer_" + Integer.toString(peerID);
         File directory = new File(directoryPath);
 
@@ -173,23 +172,22 @@ public class Peer {
             outputStream.flush();
         }
         catch (Exception e){
-            System.out.println("Caught Exception");
+            System.out.println("Exception while sending message.");
+            e.printStackTrace();
         }
     }
 
     public void readDownloadedFile() {
         if (this.hasFile == 1) {
             try {
-                // Read all bytes from the downloaded file
+                // Read all bytes from the downloaded file and store them in a buffer
                 byte[] allBytes = Files.readAllBytes(Paths.get("./peer_" + peerID + "/" + this.fileName));
-                // Set the 'file' attribute to the read bytes
                 this.file = allBytes;
-            } catch (IOException ioException) {
-                System.out.println("Exception while reading file");
-                ioException.printStackTrace();
+            } catch (IOException e) {
+                System.out.println("IOException while reading downloaded file!");
+                e.printStackTrace();
             }
         }
-        System.out.println("bytes downloaded: " + this.file.length);
     }
 
     public static <K, V> K getKey(HashMap<K, V> map, V value) {
@@ -199,7 +197,7 @@ public class Peer {
                 .findAny().get();
     }
 
-    public void preferredPeersSelection(List <Integer> interestedPeers, Instant startTime) throws IOException {
+    public void preferredPeersSelection(List <Integer> interestedPeers, Instant start) throws IOException {
         HashMap<Integer, Double> selection = new HashMap<Integer, Double>();
 
         int[] preferredNeighbors = new int[numOfPreferredNeighbors];
@@ -207,39 +205,37 @@ public class Peer {
 
         Instant finish = Instant.now();
 
-        //For each peer (neighbor) in peerManager, except for itself, calculate the download rate
-        manager.forEach((id,peerValues) -> {
-            if(id != peerID){
-                int timeElapsed = Duration.between(startTime, finish).getNano();
-                //System.out.println("id: " + id+ " bytes: " +peerValues.downloadedBytes);
-                peerValues.downloadRate = ((double) peerValues.bytesDownloaded / timeElapsed);
-                selection.put(id, peerValues.downloadRate);
-            }
+        // Calculate the download rate for each neighbor in the manager
+        manager.entrySet().stream()
+            .filter(entry -> entry.getKey() != peerID)
+            .forEach(entry -> {
+                long timeElapsed = Duration.between(start, finish).toNanos();
+                double downloadRate = ((double) entry.getValue().bytesDownloaded) / timeElapsed;
+                selection.put(entry.getKey(), downloadRate);
         });
 
         this.bytesDownloaded = 0;
 
-        //Create a list of all download rates, sort in ascending order
-        Collection<Double> values = selection.values();
-        ArrayList<Double> listOfValues = new ArrayList<Double>(values);
-        Collections.sort(listOfValues);
+        // Sort the list of download rates
+        Collection<Double> selectionValues = selection.values();
+        List<Double> valueList = new ArrayList<Double>(selectionValues);
+        Collections.sort(valueList);
 
-        if(!interestedPeers.isEmpty()){
+        if (!interestedPeers.isEmpty()) {
             //If the number of interested peers is less than the preferred neighbor limit, just select all interested peers
-            if(interestedPeers.size() <= preferredNeighbors.length){
-                for(int i = 0; i < interestedPeers.size(); i++){
+            if (interestedPeers.size() <= preferredNeighbors.length) {
+                for (int i = 0; i < interestedPeers.size(); i++) {
                     preferredNeighbors[i] = interestedPeers.get(i);
                 }
 
                 logger.preferredNeighborChange(peerID, preferredNeighbors);
 
                 for (int preferredNeighbor : preferredNeighbors) {
-
-                    //Check whether the preferredNeighbor ID is part of the unchoked peers already, add if not
+                    // Check whether the preferredNeighbor ID is part of the unchoked peers
                     if (!unchokedPeers.contains(preferredNeighbor) && preferredNeighbor != 0) {
                         unchokedPeers.add(preferredNeighbor);
 
-                        //Send unchoke message
+                        // Send the default unchoke message through the output
                         try {
                             ObjectOutputStream outputStream = null;
                             outputStream.writeObject(this.messageCreator.unchokeMessage());
@@ -252,27 +248,28 @@ public class Peer {
                     }
                 }
 
-                //Remove any peer from the unchokedPeers list if they are not part of the preferred peers array, send choke message
-                for (int peer: unchokedPeers) {
-                    //System.out.println("Unchoked peer: " + peer);
-                    boolean included = false;
-                    for (int neighbor: preferredNeighbors) {
+                // Remove unwanted peers from the unchocked list
+                for (int peer : unchokedPeers) {
+                    boolean active = false;
+                    for (int neighbor : preferredNeighbors) {
                         if (neighbor == peer) {
-                            included = true;
+                            active = true;
                             break;
                         }
                     }
 
-                    if(!included && peer!=0){
-                        //Send choke message to the removed peer
+                    if (!active && peer != 0) {
+
+                        // Send the default choke message to the recently removed peer
                         try {
                             ObjectOutputStream outputStream = null;
                             outputStream.writeObject(this.messageCreator.chokeMessage());
                             outputStream.flush();
                         } catch (IOException e) {
-                            System.out.println("IOException while sending unchoke message");
+                            System.out.println("IOException while sending choke message");
                             e.printStackTrace();
                         }
+                        // Add the peer back to be potentially chocked.
                         peersToChoke.add(peer);
                     }
                 }
@@ -284,11 +281,11 @@ public class Peer {
                 }
 
             }
-            else if(hasFile == 1){
-                //Randomly select preferred peers based on those that are interested
+            else if (hasFile == 1){
+                // Randomly select interested peers
                 Collections.shuffle(interestedPeers, new Random());
 
-                for(int i = 0; i < preferredNeighbors.length; i++){
+                for (int i = 0; i < preferredNeighbors.length; i++) {
                     preferredNeighbors[i] = interestedPeers.get(i);
                 }
 
@@ -296,7 +293,7 @@ public class Peer {
 
                 for (int preferredNeighbor : preferredNeighbors) {
 
-                    //Check whether the preferredNeighbor ID is part of the unchoked peers already, add if not
+                    // Check whether the preferredNeighbor ID is part of the unchoked peers
                     if (!unchokedPeers.contains(preferredNeighbor) && preferredNeighbor != 0) {
                         unchokedPeers.add(preferredNeighbor);
 
@@ -312,21 +309,19 @@ public class Peer {
                     }
                 }
 
-                //Remove any peer from the unchokedPeers list if they are not part of the preferred peers array, send choke message
+                // Remove unwanted peers from the unchocked list
                 for (int peer: unchokedPeers) {
-                    //System.out.println(unchokedPeers.size());
-                    boolean included = false;
-                    for (int neighbor: preferredNeighbors) {
+                    boolean active = false;
+                    for (int neighbor : preferredNeighbors) {
                         if (neighbor == peer) {
-                            included = true;
+                            active = true;
                             break;
                         }
                     }
 
-                    if(!included && peer!=0){
-                        //System.out.println("Peer "+ peer + " has been choked!");
+                    if (!active && peer != 0) {
 
-                        //Send choke message to the removed peer
+                        // Send the default choke message to the recently removed peer
                         try {
                             ObjectOutputStream outputStream = null;
                             outputStream.writeObject(this.messageCreator.chokeMessage());
@@ -348,20 +343,20 @@ public class Peer {
             } else  {
 
                 for (int i = 0; i < preferredNeighbors.length; i++){
-                    if (interestedPeers.contains(getKey(selection, listOfValues.get(listOfValues.size()-1)))){
-                        preferredNeighbors[i] = getKey(selection, listOfValues.get(listOfValues.size()-1));
+                    if (interestedPeers.contains(getKey(selection, valueList.get(valueList.size()-1)))){
+                        preferredNeighbors[i] = getKey(selection, valueList.get(valueList.size()-1));
                     }
-                    listOfValues.remove(listOfValues.size()-1);
+                    valueList.remove(valueList.size()-1);
                 }
 
                 logger.preferredNeighborChange(peerID, preferredNeighbors);
 
-                //Check whether the preferredNeighbor ID is part of the unchoked peers already, add if not
+                // Check whether the preferredNeighbor ID is part of the unchoked peers
                 for (int preferredNeighbor : preferredNeighbors) {
                     if (!unchokedPeers.contains(preferredNeighbor) && preferredNeighbor != 0) {
                         unchokedPeers.add(preferredNeighbor);
 
-                        //Send unchoke message
+                        // Send default unchoke message
                         try {
                             ObjectOutputStream outputStream = null;
                             outputStream.writeObject(this.messageCreator.unchokeMessage());
@@ -373,20 +368,18 @@ public class Peer {
                     }
                 }
 
-                //Remove any peer from the unchokedPeers list if they are not part of the preferred peers array, send choke message
+                // Remove unwanted peers from the unchocked list
                 for (int peer: unchokedPeers) {
-                    boolean included = false;
+                    boolean active = false;
                     for (int neighbor: preferredNeighbors) {
                         if (neighbor == peer) {
-                            included = true;
+                            active = true;
                             break;
                         }
                     }
 
-                    if(!included && peer!=0){
-                        //System.out.println("Peer "+ peer + " has been choked!");
-
-                        //Send choke message to the removed peer
+                    if (!active && peer != 0) {
+                        //Send default choke message 
                         try {
                             ObjectOutputStream outputStream = null;
                             outputStream.writeObject(this.messageCreator.chokeMessage());
@@ -410,7 +403,7 @@ public class Peer {
 
     }
 
-    public void peerChokeTracker() {
+    public void startChokeThread() {
         Peer peer = this;
         final Instant[] start = {Instant.now()};
 
@@ -433,18 +426,19 @@ public class Peer {
         thread.start();
     }
 
-    private void optimisticallyUnchokePeer(List<Integer> InterestedPeers) throws IOException {
-        List<Integer> candidatePeers = new ArrayList<>();
-        for(int interestedPeerId : InterestedPeers) {
-            if(!unchokedPeers.contains(interestedPeerId)) {
-                candidatePeers.add(interestedPeerId);
+    private void unchokeActivePeer(List<Integer> interestedPeers) throws IOException {
+        List<Integer> selection = new ArrayList<>();
+        for (int interestedPeerId : interestedPeers) {
+            if (!unchokedPeers.contains(interestedPeerId)) {
+                selection.add(interestedPeerId);
             }
         }
-        if(!candidatePeers.isEmpty()) {
-            Collections.shuffle(candidatePeers, new Random());
-            int optimisticallyUnchokedPeerId = candidatePeers.get(0);
-            logger.optimisticallyUnchockedChange(peerID, optimisticallyUnchokedPeerId);
-            //Send unchoke message
+
+        if (!selection.isEmpty()) {
+            Collections.shuffle(selection, new Random());
+            int currPeerID = selection.get(0);
+            logger.optimisticallyUnchockedChange(peerID, currPeerID);
+            // Send default unchoke message
             try {
                 ObjectOutputStream outputStream = null;
                 outputStream.writeObject(this.messageCreator.unchokeMessage());
@@ -454,20 +448,19 @@ public class Peer {
                 e.printStackTrace();
             }
 
-            this.optimisticUnchokedPeer = optimisticallyUnchokedPeerId;
+            this.optimisticUnchokedPeer = currPeerID;
         }
     }
 
-    public void startOptimisticallyUnchokingPeer() {
+    public void unchokePeer() {
         Peer peer = this;
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-
-                //We are gonna have to check when all the peers have completed their download to stop this thread
+                // We are gonna have to check when all the peers have completed their download to stop this thread
                 while(true) {
                     try {
-                        peer.optimisticallyUnchokePeer(peer.interestedPeers);
+                        peer.unchokeActivePeer(peer.interestedPeers);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
