@@ -1,11 +1,14 @@
 package logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.logging.FileHandler;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import peer.Peer;
 
@@ -19,17 +22,21 @@ public class WritingLogger {
         this.peerID = peer.peerID;
         this.messageLogger = Logger.getLogger(Integer.toString(peerID));
 
+        FileHandler fileHandler;
+        
         //Creating the log file directory for the peer
-        String workingDir = System.getProperty("user.dir");
-        String directoryPath = workingDir + "/log_peer_" + Integer.toString(peerID) + ".log";
-        File directory = new File(directoryPath);
-        if (!directory.exists()) {
-            if (directory.mkdirs()) {
-                System.out.println("Directory created: " + directoryPath);
-            } else {
-                System.out.println("Failed to create directory: " + directoryPath);
-            }
-        }
+        try {  
+            String workingDir = System.getProperty("user.dir");
+            // This block configure the logger with handler and formatter  
+            fileHandler = new FileHandler(workingDir+ "/log_peer_" + Integer.toString(peerID) + ".log");  
+            messageLogger.addHandler(fileHandler);
+            SimpleFormatter formatter = new SimpleFormatter();  
+            fileHandler.setFormatter(formatter);  
+        } catch (SecurityException e) {  
+            e.printStackTrace();  
+        } catch (IOException e) {  
+            e.printStackTrace();  
+        } 
     }
 
     // Provides the current time of execution.
