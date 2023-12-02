@@ -16,51 +16,52 @@ public class Server implements Runnable {
     private ObjectInputStream inputStream;
     private ObjectOutputStream outputStream;
 
-    public Server(Peer peer){
+    public Server(Peer peer) {
         this.peer = peer;
     }
 
-    public void run(){
+    public void run() {
+        System.out.println("Starting server thread in server");
         ServerSocket listener = null;
         try {
             listener = new ServerSocket(peer.listeningPort);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("Error creating server socket");
+            e.printStackTrace();
         }
-        while(true){
-            try {
+        try {
+            while (true) {
+
                 socket = listener.accept();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
 
-            try {
                 outputStream = new ObjectOutputStream(socket.getOutputStream());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            try {
+
                 outputStream.flush();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
 
-            try {
                 inputStream = new ObjectInputStream(socket.getInputStream());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+
+                // create message handler this will handle dealing with incoming messages as
+                // well as sending responses to messages
+                System.out.println("Creating message handler");
+                MessageHandler handler = new MessageHandler(inputStream, outputStream, peer, socket); 
+                // peer.setOut(out);
+
+                // start handler on thread
+                Thread serverThread = new Thread(handler);
+                serverThread.start();
             }
-
-            //create message handler this will handle dealing with incoming messages as well as sending responses to messages
-            MessageHandler handler = new MessageHandler(inputStream, outputStream, peer, socket); //(assuming we want peer and socket maybe not needed?)
-//                peer.setOut(out);
-
-            //start handler on thread
-            Thread serverThread = new Thread(handler);
-            serverThread.start();
+        } catch (IOException e) {
+            System.out.println("Error creating server thread");
+            e.printStackTrace();
+        } finally {
+            try {
+                listener.close();
+            } catch (IOException e) {
+                System.out.println("Error closing server socket");
+                e.printStackTrace();
+            }
         }
 
     }
-
 
 }
