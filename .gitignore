@@ -2,5 +2,8 @@
 *.class
 
 # peer_info
-peer_info/*
 *.jpg
+/peer_10*
+
+# log files
+/log*

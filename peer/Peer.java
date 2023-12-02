@@ -26,6 +26,7 @@ public class Peer {
     public int listeningPort;
     public int hasFile;
     public byte[] file;
+    public ObjectOutputStream outputStream;
 
     // General attributes
     public Hashtable<Integer, Peer> manager;
@@ -351,6 +352,8 @@ public class Peer {
             int currPeerID = selection.get(0);
             logger.optimisticallyUnchockedChange(peerID, currPeerID);
             // Send default unchoke message
+            //sendMessage(this.messageCreator.unchokeMessage(), outputStream, currPeerID);
+            
             try {
                 ObjectOutputStream outputStream = null;
                 outputStream.writeObject(this.messageCreator.unchokeMessage());
@@ -388,4 +391,44 @@ public class Peer {
         });
         thread.start();
     }
+
+    public void saveFile(){
+        FileOutputStream fileOutputStream = null;
+        try {
+            File dir = new File("./peer_"+ peerID);
+            dir.mkdirs();
+            File fileLocation = new File(dir, fileName);
+            fileLocation.createNewFile();
+            fileOutputStream = new FileOutputStream(fileLocation);
+
+            for(int i = 0; i<numPieces; i++){
+                fileOutputStream.write(file[i]);
+            }
+        } catch (FileNotFoundException fileNotFoundException) {
+            System.out.println("FileNotFoundException while saving downloaded file to disk.");
+            fileNotFoundException.printStackTrace();
+        } catch (IOException ioException) {
+            System.out.println("IOException while writing pieces to file.");
+            ioException.printStackTrace();
+        } finally {
+            if(fileOutputStream != null) {
+                try {
+                    fileOutputStream.flush();
+                    fileOutputStream.close();
+                } catch(IOException ioException) {
+                    System.out.println("IOException while closing file output stream");
+                    ioException.printStackTrace();
+                }
+            }
+        }
+    }
+
+    // public void updateDownloadedByte(int bytes){
+    //     this.bytesDownloaded += bytes;
+    // }
+
+    // public void updatePieceNumDownloaded(){
+    //     this.piecesDownloaded++;
+    // }
+
 }

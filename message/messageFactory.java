@@ -14,6 +14,8 @@ public class messageFactory {
         byte[] peerIdBytes = String.format("%04d", peerId).getBytes();
         System.arraycopy(peerIdBytes, 0, handshakeMessage, header.length, 4);
 
+        System.out.println(peerId + " handshake message: " + Arrays.toString(handshakeMessage));
+
         return handshakeMessage;
     }
 
@@ -77,7 +79,7 @@ public class messageFactory {
     }
 
     // not interested type 3
-    public byte[] notinterestedMessage() throws IOException {
+    public byte[] notInterestedMessage() throws IOException {
         byte[] message = new byte[5];
 
         byte[] messageLength = new byte[4];
