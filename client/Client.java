@@ -30,10 +30,10 @@ public class Client {
             inputStream = new ObjectInputStream(socket.getInputStream());
 
             // Instantiate a message handler to control incoming and outgoing messages
-            messageManager messageHandler = new messageManager(inputStream, outputStream, hostPeer, socket);
+            messageManager manager = new messageManager(inputStream, outputStream, hostPeer, socket);
 
             // Instantiate the handler on its own thread
-            Thread serverThread = new Thread(messageHandler);
+            Thread serverThread = new Thread(manager);
             serverThread.start();
         }
         catch (ConnectException e) {
