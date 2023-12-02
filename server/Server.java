@@ -55,6 +55,7 @@ public class Server implements Runnable {
         } finally {
             try {
                 listener.close();
+                
             } catch (IOException e) {
                 System.out.println("Error closing server socket");
                 e.printStackTrace();
