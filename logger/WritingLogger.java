@@ -104,6 +104,10 @@ public class WritingLogger {
         messageLogger.info(getCurrentTime() + ": Peer " + peerID + " has downloaded the complete file.");
     }
 
+    public void handShake(int peerID, int targetPeerID){
+        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " has sent a handshake message to Peer " + targetPeerID);
+    }
+
     public static void main(String[] args) {
     }
 }
