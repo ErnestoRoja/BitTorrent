@@ -6,7 +6,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import message.MessageCreator;
+import message.messageFactory;
 import logger.WritingLogger;
 
 public class Peer {
@@ -33,7 +33,7 @@ public class Peer {
     public Hashtable<Integer, BitSet> interestingPieces;
     public ArrayList<Integer> interestedPeers;
     public List<Integer> unchokedPeers;
-    public MessageCreator messageCreator;
+    public messageFactory messageCreator;
     public int bytesDownloaded;
     public int piecesDownloaded;
     public WritingLogger logger;
@@ -99,7 +99,7 @@ public class Peer {
         this.interestingPieces = new Hashtable<Integer, BitSet>();
         this.interestedPeers = new ArrayList<>();
         this.bitField = new BitSet(numPieces);
-        this.messageCreator = new MessageCreator();
+        this.messageCreator = new messageFactory();
         this.bytesDownloaded = 0;
         this.piecesDownloaded = 0;
 

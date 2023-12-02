@@ -3,7 +3,7 @@ package server;
 import java.io.*;
 import java.net.*;
 import peer.Peer;
-import message.MessageHandler;
+import message.messageManager;
 
 public class Server implements Runnable {
 
@@ -42,7 +42,7 @@ public class Server implements Runnable {
                 // create message handler this will handle dealing with incoming messages as
                 // well as sending responses to messages
                 System.out.println("Creating message handler");
-                MessageHandler handler = new MessageHandler(inputStream, outputStream, peer, socket); 
+                messageManager handler = new messageManager(inputStream, outputStream, peer, socket); 
                 // peer.setOut(out);
 
                 // start handler on thread

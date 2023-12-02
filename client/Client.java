@@ -7,7 +7,7 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import message.MessageHandler;
+import message.messageManager;
 import peer.Peer;
 
 public class Client {
@@ -30,10 +30,10 @@ public class Client {
             inputStream = new ObjectInputStream(socket.getInputStream());
 
             // Instantiate a message handler to control incoming and outgoing messages
-            MessageHandler handler = new MessageHandler(inputStream, outputStream, hostPeer, socket);
+            messageManager messageHandler = new messageManager(inputStream, outputStream, hostPeer, socket);
 
             // Instantiate the handler on its own thread
-            Thread serverThread = new Thread(handler);
+            Thread serverThread = new Thread(messageHandler);
             serverThread.start();
         }
         catch (ConnectException e) {
