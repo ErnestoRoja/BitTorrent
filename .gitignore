@@ -1,3 +1,6 @@
 # Exclude compiled .class files
 *.class
+
+# peer_info
+peer_info/*
 *.jpg

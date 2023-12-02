@@ -31,7 +31,6 @@ public class Server implements Runnable {
         }
         try {
             while (true) {
-
                 socket = listener.accept();
 
                 outputStream = new ObjectOutputStream(socket.getOutputStream());
