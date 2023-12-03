@@ -87,7 +87,7 @@ public class peerProcess {
                 logger.connect(peerID, currPeerID);
             }
         }
-        //peers.get(peerID).startChokeThread();
-        // peers.get(peerID).unchokePeer();
+        peers.get(peerID).startChokeThread();
+        peers.get(peerID).unchokePeer();
     }
 }

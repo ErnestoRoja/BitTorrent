@@ -85,19 +85,19 @@ public class WritingLogger {
     }
 
     public void receivingHave(int peerID, int peerID_2, int pieceIndex){
-        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " received the ‘have’ message from " + peerID_2 + "for the piece" + pieceIndex + ".");
+        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " received the have message from " + peerID_2 + "for the piece" + pieceIndex + ".");
     }
 
     public void interested(int peerID, int peerID_2){
-        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " received the ‘interested’ message from " + peerID_2 + ".");
+        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " received the \'interested message\' from " + peerID_2 + ".");
     }
 
     public void notInterested(int peerID, int peerID_2){
-        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " received the ‘not interested’ message from " + peerID_2 + ".");
+        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " received the \'not interested\' message from " + peerID_2 + ".");
     }
 
     public void downloading(int peerID, int peerID_2, int pieceIndex, int numPieces){
-        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " has downloaded the piece " + pieceIndex + "from" + peerID_2 + ". Now the number of pieces it has is" + numPieces + ".");
+        messageLogger.info(getCurrentTime() + ": Peer " + peerID + " has downloaded the piece " + pieceIndex + " from Peer: " + peerID_2 + ". Now the number of pieces it has is " + numPieces + ".");
     }
 
     public void downloaded(int peerID){

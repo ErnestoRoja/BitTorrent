@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 
@@ -40,31 +41,110 @@ public class messageManager implements Runnable {
     }
 
     public void run() {
-        // executed when thread.start() is run
-        // peer send handshake message to target
-        
+
         try {
             byte[] handshakeMessage = new byte[0];
             handshakeMessage = creator.handshakeMessage(peer.peerID);
             peer.sendMessage(handshakeMessage, outputStream);
         } catch (Exception e) {
-            System.out.println(e);
         }
-
-        // if peer + neightbors DO NOT have file -> System.exit(0)
 
         while (true) {
             if (peer.hasFile == 1 && peer.checkNeighborFiles()) { // add check for neighbors having file
                 System.exit(0);
             }
             try {
-
                 byte[] receivedMessage = (byte[]) inputStream.readObject();
                 readMessage(receivedMessage);
 
             } catch (Exception e) {
-                System.out.println(e);
             }
+        }
+    }
+
+    public void readHaveMessage(byte[] message) { // 4
+        int pieceIndex = ByteBuffer.wrap(Arrays.copyOfRange(message, 5, 9)).order(ByteOrder.BIG_ENDIAN).getInt();
+
+        logger.receivingHave(peer.peerID, targetPeerId, pieceIndex);
+
+        peer.bitField.set(pieceIndex, true);
+        if (peer.bitField.nextClearBit(0) == peer.numPieces) {
+            peer.hasFile = 1;
+        }
+
+        BitSet updatedBitfield = peer.manager.get(targetPeerId).bitField;
+
+        if (peer.bitField.equals(updatedBitfield)) {
+
+            try {
+                byte[] notInterestedMessage = creator.notInterestedMessage();
+                peer.sendMessage(notInterestedMessage, outputStream);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        else if (peer.bitField.isEmpty() && !updatedBitfield.isEmpty()) {
+
+            BitSet interestingPieces = (BitSet) peer.bitField.clone();
+            interestingPieces.or(updatedBitfield);
+
+            if (peer.interestingPieces.containsKey(targetPeerId)) {
+                if (interestingPieces.isEmpty()) {
+                    peer.interestingPieces.remove(targetPeerId);
+                } else {
+                    peer.interestingPieces.replace(targetPeerId, peer.interestingPieces.get(targetPeerId),
+                            interestingPieces);
+                }
+            } else {
+                peer.interestingPieces.put(targetPeerId, interestingPieces);
+            }
+
+            try {
+                byte[] interestedMessage = creator.interestedMessage();
+                peer.sendMessage(interestedMessage, outputStream);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        else if (peer.bitField.isEmpty() && updatedBitfield.isEmpty()) {
+            try {
+                byte[] notInterestedMessage = creator.notInterestedMessage();
+                peer.sendMessage(notInterestedMessage, outputStream);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        } else {
+            BitSet interestingPieces = (BitSet) peer.bitField.clone();
+            interestingPieces.or(updatedBitfield);
+
+            interestingPieces.xor(peer.bitField);
+
+            if (peer.interestingPieces.containsKey(targetPeerId)) {
+                if (interestingPieces.isEmpty()) {
+                    peer.interestingPieces.remove(targetPeerId);
+                } else {
+                    peer.interestingPieces.replace(targetPeerId, peer.interestingPieces.get(targetPeerId),
+                            interestingPieces);
+                }
+            } else {
+                peer.interestingPieces.put(targetPeerId, interestingPieces);
+            }
+
+            try {
+                if (interestingPieces.isEmpty()) {
+                    byte[] notInterestedMessage = creator.notInterestedMessage();
+                    peer.sendMessage(notInterestedMessage, outputStream);
+                } else {
+                    byte[] interestedMessage = creator.interestedMessage();
+                    peer.sendMessage(interestedMessage, outputStream);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 
@@ -82,18 +162,18 @@ public class messageManager implements Runnable {
             byte[] notInterestedMessage = creator.notInterestedMessage();
             peer.sendMessage(notInterestedMessage, outputStream);
         } else if (peerBitfield.isEmpty() && !receivedBitfield.isEmpty()) {
-            BitSet interestingPiece = (BitSet) peerBitfield.clone();
-            interestingPiece.or(receivedBitfield);
+            BitSet interestingPieces = (BitSet) peerBitfield.clone();
+            interestingPieces.or(receivedBitfield);
 
-            if (peer.interestingPieces.containsKey(peer.peerID)) {
-                if (interestingPiece.isEmpty()) {
-                    peer.interestingPieces.remove(peer.peerID);
+            if (peer.interestingPieces.containsKey(targetPeerId)) {
+                if (interestingPieces.isEmpty()) {
+                    peer.interestingPieces.remove(targetPeerId);
                 } else {
-                    peer.interestingPieces.replace(peer.peerID, peer.interestingPieces.get(peer.peerID),
-                            interestingPiece);
+                    peer.interestingPieces.replace(targetPeerId, peer.interestingPieces.get(targetPeerId),
+                            interestingPieces);
                 }
             } else {
-                peer.interestingPieces.put(peer.peerID, interestingPiece);
+                peer.interestingPieces.put(targetPeerId, interestingPieces);
             }
 
             byte[] interestedMessage = creator.interestedMessage();
@@ -103,23 +183,23 @@ public class messageManager implements Runnable {
             byte[] notInterestedMessage = creator.notInterestedMessage();
             peer.sendMessage(notInterestedMessage, outputStream);
         } else {
-            BitSet interestingPiece = (BitSet) peerBitfield.clone();
-            interestingPiece.or(receivedBitfield);
+            BitSet interestingPieces = (BitSet) peerBitfield.clone();
 
-            interestingPiece.xor(peer.bitField);
+            interestingPieces.or(receivedBitfield);
+            interestingPieces.xor(peer.bitField);
 
-            if (peer.interestingPieces.containsKey(peer.peerID)) {
-                if (interestingPiece.isEmpty()) {
-                    peer.interestingPieces.remove(peer.peerID);
+            if (peer.interestingPieces.containsKey(targetPeerId)) {
+                if (interestingPieces.isEmpty()) {
+                    peer.interestingPieces.remove(targetPeerId);
                 } else {
-                    peer.interestingPieces.replace(peer.peerID, peer.interestingPieces.get(peer.peerID),
-                            interestingPiece);
+                    peer.interestingPieces.replace(targetPeerId, peer.interestingPieces.get(targetPeerId),
+                            interestingPieces);
                 }
             } else {
-                peer.interestingPieces.put(peer.peerID, interestingPiece);
+                peer.interestingPieces.put(targetPeerId, interestingPieces);
             }
 
-            if (interestingPiece.isEmpty()) {
+            if (interestingPieces.isEmpty()) {
                 byte[] notInterestedMessage = creator.notInterestedMessage();
                 peer.sendMessage(notInterestedMessage, outputStream);
             } else {
@@ -128,21 +208,17 @@ public class messageManager implements Runnable {
 
             }
         }
-        // peer.bitField = BitSet.valueOf(bitfield);
-        // logger.receivingBitfield(peer.peerID, targetPeerId, peer.bitField);
+
     }
 
     public void readRequestMessage(byte[] message) throws IOException { // 6
         int pieceIndex = ByteBuffer.wrap(Arrays.copyOfRange(message, 5, 9)).order(ByteOrder.BIG_ENDIAN).getInt();
         byte[] data = peer.file.clone();
 
-        // peer.file[pieceIndex].clone();
         byte[] pieceMessage = creator.pieceMessage(pieceIndex, data);
 
         peer.sendMessage(pieceMessage, outputStream);
 
-        // byte [] requestMessage = creator.requestMessage(pieceIndex);
-        // peer.sendMessage(requestMessage, outputStream, targetPeerId);
     }
 
     public void readPieceMessage(byte[] message) throws IOException { // 7
@@ -154,27 +230,26 @@ public class messageManager implements Runnable {
 
         int pieceIndexInt = ByteBuffer.wrap(pieceIndex).getInt();
 
-        for (int i = 0; i < piece.length; i++) {
-            peer.file[pieceIndexInt + i] = piece[i];
+        if (peer.pieceInfo.containsKey(pieceIndexInt)) {
+            return;
         }
 
-        // peer.file[pieceIndexInt] = piece;
+        peer.pieceInfo.put(pieceIndexInt, piece);
 
         peer.piecesDownloaded++;
 
         logger.downloading(peer.peerID, targetPeerId, pieceIndexInt, peer.piecesDownloaded);
-        // Set bitfield to indicate we now have this piece ( we will not request this
-        // piece)
+
         peer.manager.get(targetPeerId).bytesDownloaded += piece.length;
 
+        peer.bitField.set(pieceIndexInt, true);
         if (peer.bitField.nextClearBit(0) == peer.numPieces) {
             peer.hasFile = 1;
         }
 
-        peer.manager.forEach((k, v) -> {
-            if (k != peer.peerID) {
+        peer.manager.forEach((i, j) -> {
+            if (i != peer.peerID) {
                 try {
-                    // logger.sentHaveMessage(peer.peerID, k, pieceIndexInt);
                     peer.sendMessage(creator.haveMessage(pieceIndexInt), outputStream);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -187,111 +262,113 @@ public class messageManager implements Runnable {
             validPieces.flip(0, peer.numPieces);
             validPieces.and(peer.interestingPieces.get(targetPeerId));
 
-            // System.out.println(validPieces);
-
             List<Integer> validPieceIndex = new ArrayList<>();
 
             for (int i = 0; i < validPieces.length(); i++) {
-                if (validPieces.get(i) == true)
+                if (validPieces.get(i) == true) {
                     validPieceIndex.add(i);
+                }
             }
 
             Collections.shuffle(validPieceIndex, new Random());
 
             int requestPiece = validPieceIndex.get(0);
 
-            /*
-             * Test Print Statement:
-             * System.out.println("Requesting Piece after receiving piece request piece is "
-             * + requestPiece);
-             */
-            // logger.requestedPieceFrom(peer.peerID, remotePeerId, requestPiece);
-            // Create and send request message for the piece we want
             peer.sendMessage(creator.requestMessage(requestPiece), outputStream);
+
         } else {
-            // logger.finishedDownloadComplete(peer.peerID);
+            logger.downloaded(peer.peerID);
             peer.saveFile();
         }
 
-        // logger.downloading(pieceIndex, pieceIndex, pieceIndex, pieceIndex);
     }
 
-    /*
-     * steps
-     * 
-     * 1 - send handshake message
-     * 
-     * 2 - if peer does NOT have file and neighbors do NOT have file -> exit
-     * else, listen
-     * 
-     * 3 - read message from input stream
-     * 4 - switch case message type + handle
-     * 
-     * 
-     */
+    public void readUnchokeMessage(byte[] message) throws IOException { // 1
+        if (peer.hasFile == 0) {
+            BitSet valid = (BitSet) peer.bitField.clone();
+            valid.flip(0, peer.numPieces);
+
+            valid.and(peer.interestingPieces.get(targetPeerId));
+            List<Integer> validPieceIndex = new ArrayList<>();
+            for (int i = 0; i < valid.length(); i++) {
+                if (valid.get(i) == true) {
+                    validPieceIndex.add(i);
+                }
+            }
+            Collections.shuffle(validPieceIndex, new Random());
+
+            int requestPiece = validPieceIndex.get(0);
+            byte[] requestMessage = creator.requestMessage(requestPiece);
+            peer.sendMessage(requestMessage, outputStream);
+        }
+
+    }
 
     public void readHandshakeMessage(byte[] message) {
         ByteBuffer buffer = ByteBuffer.wrap(message);
         byte[] header = new byte[18];
         buffer.get(header, 0, 18);
 
-        String handShakeString = new String(header, StandardCharsets.UTF_8);
+        String handShakeHeader = new String(header, StandardCharsets.UTF_8);
 
-        if (handShakeString.equals("P2PFILESHARINGPROJ")) {
+        String handShakeString = new String(message, StandardCharsets.UTF_8);
+
+        int targetId = Integer.parseInt(handShakeString.substring(handShakeString.length() - 6).trim());
+        setManagerPeerID(targetId);
+
+        if (handShakeHeader.equals("P2PFILESHARINGPROJ")) {
             byte[] peerId = new byte[4];
             System.arraycopy(message, 28, peerId, 0, 4);
-            
-            // logger.connectedFromPeer(peer.peerID, targetPeerId);
-            //System.out.println("peerID being targeted in handshake: " + targetPeerId);
+
             logger.handShake(peer.peerID, targetPeerId);
             try {
                 peer.sendMessage(creator.bitfieldMessage(peer.bitField), outputStream);
             } catch (IOException e) {
-                System.out.println(e);
             }
+
+            peer.manager.get(targetPeerId).outputStream = outputStream;
+
         }
     }
 
-    // Still needs further implementation.
     public void readMessage(byte[] message) throws IOException {
+
         int messageType = message[4];
-        System.out.println("Message Type: " + messageType);
 
         switch (messageType) {
             case 0: // choke
-                System.out.println("Choke Message");
                 logger.choking(peer.peerID, targetPeerId);
+                break;
             case 1: // unchoke
-                System.out.println("Unchoke Message");
                 logger.unchoking(peer.peerID, targetPeerId);
+                readUnchokeMessage(message);
                 break;
             case 2: // interested
-                System.out.println("Interested Message");
-                logger.interested(peer.peerID, peer.peerID);
+                logger.interested(peer.peerID, targetPeerId);
+                peer.interestedPeers.add(targetPeerId);
                 break;
             case 3: // not interested
-                System.out.println("Not interested Message");
-                logger.notInterested(peer.peerID, peer.peerID);
+                logger.notInterested(peer.peerID, targetPeerId);
+
+                int notInterestedIndex = peer.interestedPeers.indexOf(targetPeerId);
+                if (notInterestedIndex != -1) {
+                    peer.interestedPeers.remove(notInterestedIndex);
+                }
                 break;
             case 4: // have
-                System.out.println("Have Message");
-                logger.receivingHave(messageType, messageType, messageType);
+                readHaveMessage(message);
+                logger.receivingHave(peer.peerID, targetPeerId, messageType);
                 break;
             case 5: // bitfield
-                System.out.println("Bitfield Message");
-                // logger.bi
                 readBitfieldMessage(message);
                 break;
             case 6: // request
-                System.out.println("Request Message");
                 readRequestMessage(message);
                 break;
             case 7: // piece
-                System.out.println("Piece Message");
                 readPieceMessage(message);
                 break;
             default: // handshake message
-                System.out.println("Handshake Message");
                 readHandshakeMessage(message);
 
         }
