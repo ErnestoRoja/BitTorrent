@@ -26,6 +26,7 @@ public class Peer {
     public int listeningPort;
     public int hasFile;
     public byte[] file;
+    public Hashtable<Integer, byte[]> pieceInfo;
     public ObjectOutputStream outputStream;
 
     // General attributes
@@ -42,7 +43,11 @@ public class Peer {
     public int optimisticUnchokedPeer;
 
     public Peer() {
-
+        this.optimisticUnchokedPeer = 0;
+        this.unchokedPeers = new ArrayList<>();
+        this.downloadRate = 0;
+        this.bytesDownloaded = 0;
+        this.pieceInfo = new Hashtable<>();
     }
 
     public void parseCommonConfig() {
@@ -66,17 +71,11 @@ public class Peer {
 
         // Configures the peers with all the available configs.
         this.numOfPreferredNeighbors = Integer.parseInt(prop.getProperty("NumberOfPreferredNeighbors"));
-        System.out.println("\nNumberOfPreferredNeighbors " + this.numOfPreferredNeighbors);
         this.unchokingInterval = Integer.parseInt(prop.getProperty("UnchokingInterval"));
-        System.out.println("UnchokingInterval " + this.unchokingInterval);
         this.optimisticUnchokingInterval = Integer.parseInt(prop.getProperty("OptimisticUnchokingInterval"));
-        System.out.println("OptimisticUnchokingInterval " + this.optimisticUnchokingInterval);
         this.fileName = prop.getProperty("FileName");
-        System.out.println("FileName " + this.fileName);
         this.fileSize = Integer.parseInt(prop.getProperty("FileSize"));
-        System.out.println("FileSize " + this.fileSize);
         this.pieceSize = Integer.parseInt(prop.getProperty("PieceSize"));
-        System.out.println("PieceSize " + this.pieceSize);
         
         // Calculate the number of pieces in the file
         double result = (double)this.fileSize/this.pieceSize;
@@ -138,9 +137,7 @@ public class Peer {
         // Check if the directory exists. If not, create it.
         if (!directory.exists()) {
             if (directory.mkdirs()) {
-                System.out.println("Directory created: " + directoryPath);
             } else {
-                System.out.println("Failed to create directory: " + directoryPath);
                 return;
             }
         }
@@ -154,10 +151,8 @@ public class Peer {
                 fileOutputStream.write(file);
             }
         } catch (FileNotFoundException fileNotFound) {
-            System.out.println("FileNotFoundException caught file is either a directory or does not exist.");
             fileNotFound.printStackTrace();
         } catch (IOException ioException) {
-            System.out.println("IOException caught from function createNewFile.");
             ioException.printStackTrace();
         } finally {
             // Ensure that the fileOutputStream is closed even if an exception occurs.
@@ -166,7 +161,6 @@ public class Peer {
                     fileOutputStream.flush();
                     fileOutputStream.close();
                 } catch (IOException ioException) {
-                    System.out.println("IOException caught from function flush or close");
                     ioException.printStackTrace();
                 }
             }
@@ -184,7 +178,6 @@ public class Peer {
             outputStream.flush();
         }
         catch (Exception e){
-            System.out.println("Exception while sending message.");
             e.printStackTrace();
         }
     }
@@ -196,7 +189,6 @@ public class Peer {
                 byte[] allBytes = Files.readAllBytes(Paths.get("./peer_" + peerID + "/" + this.fileName));
                 this.file = allBytes;
             } catch (IOException e) {
-                System.out.println("IOException while reading downloaded file!");
                 e.printStackTrace();
             }
         }
@@ -232,11 +224,19 @@ public class Peer {
         return valueList;
     }
 
-    private void sendUnchokeMessage() throws IOException {
-        try (ObjectOutputStream outputStream = new ObjectOutputStream(new ByteArrayOutputStream())) {
-            outputStream.writeObject(this.messageCreator.unchokeMessage());
-            outputStream.flush();
+    private void sendUnchokeMessage(int preferredNeighbor) throws IOException {
+        try {
+            byte [] unchokeMessage = this.messageCreator.unchokeMessage();
+            if(this.manager.get(preferredNeighbor).outputStream == null){
+                throw new Exception ("Output stream is null while sending unchoke message."); 
+            }
+            else{
+                sendMessage(unchokeMessage, this.manager.get(preferredNeighbor).outputStream);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+       
     }
 
     private void sendChokeMessage(int peer) throws IOException {
@@ -260,7 +260,9 @@ public class Peer {
                 preferredNeighbors[i] = interestedPeers.get(i);
             }
     
+
             logger.preferredNeighborChange(peerID, preferredNeighbors);
+
         } else {
             for (int i = 0; i < preferredNeighbors.length; i++) {
                 if (interestedPeers.contains(getKey(selection, valueList.get(valueList.size() - 1)))) {
@@ -274,27 +276,21 @@ public class Peer {
     }
 
     private void updateAndSendUnchokeMessages(int[] preferredNeighbors, List<Integer> peersToChoke) throws IOException {
-        updateUnchokedPeers(preferredNeighbors);
-        processChokedPeers(preferredNeighbors, peersToChoke);
-    }
-    
-    private void updateUnchokedPeers(int[] preferredNeighbors) throws IOException {
         for (int preferredNeighbor : preferredNeighbors) {
             if (!unchokedPeers.contains(preferredNeighbor) && preferredNeighbor != 0) {
                 unchokedPeers.add(preferredNeighbor);
-                sendUnchokeMessage();
+                sendUnchokeMessage(preferredNeighbor);
             }
         }
-    }
-    
-    private void processChokedPeers(int[] preferredNeighbors, List<Integer> peersToChoke) throws IOException {
         for (int peer : unchokedPeers) {
             if (!isActivePeer(peer, preferredNeighbors) && peer != 0) {
+
                 sendChokeMessage(peer);
                 peersToChoke.add(peer);
             }
         }
     }
+    
     
     private boolean isActivePeer(int peer, int[] preferredNeighbors) {
         for (int neighbor : preferredNeighbors) {
@@ -308,7 +304,8 @@ public class Peer {
     private void removeUnwantedPeers(List<Integer> peersToChoke) {
         for (int peer : peersToChoke) {
             if (unchokedPeers.contains(peer)) {
-                unchokedPeers.remove(peer);
+                int index = unchokedPeers.indexOf(peer);
+                unchokedPeers.remove(index);
             }
         }
     }
@@ -332,15 +329,16 @@ public class Peer {
         final Instant[] start = {Instant.now()};
 
         Thread thread = new Thread(new Runnable() {
+            
             @Override
             public void run() {
+
                 while (true) {
                     try {
                         preferredPeersSelection(interestedPeers, start[0]);
                         start[0] = Instant.now();
-                        Thread.sleep(unchokingInterval);
+                        Thread.sleep(unchokingInterval * 1000);
                     } catch (Exception e) {
-                        System.out.println("Exception caught while trying to start choke thread.");
                         e.printStackTrace();
                     }
                 }
@@ -362,16 +360,9 @@ public class Peer {
             int currPeerID = selection.get(0);
             logger.optimisticallyUnchockedChange(peerID, currPeerID);
             // Send default unchoke message
-            //sendMessage(this.messageCreator.unchokeMessage(), outputStream, currPeerID);
+            byte [] unchokeMessage = this.messageCreator.unchokeMessage();
+            sendMessage(unchokeMessage, this.manager.get(currPeerID).outputStream);
             
-            try {
-                ObjectOutputStream outputStream = null;
-                outputStream.writeObject(this.messageCreator.unchokeMessage());
-                outputStream.flush();
-            } catch (IOException e) {
-                System.out.println("IOException while sending unchoke message");
-                e.printStackTrace();
-            }
 
             this.optimisticUnchokedPeer = currPeerID;
         }
@@ -387,13 +378,11 @@ public class Peer {
                     try {
                         peer.unchokeActivePeer(peer.interestedPeers);
                     } catch (IOException e) {
-                        System.out.println("IOException caught while trying to unchoke active peer in thread.");
                         e.printStackTrace();
                     }
                     try {
-                        Thread.sleep(optimisticUnchokingInterval);
+                        Thread.sleep(optimisticUnchokingInterval * 1000);
                     } catch (Exception e) {
-                        System.out.println("Exception caught while unchoke thread is sleeping.");
                         e.printStackTrace();
                     }
                 }
@@ -411,14 +400,12 @@ public class Peer {
             fileLocation.createNewFile();
             fileOutputStream = new FileOutputStream(fileLocation);
 
-            for(int i = 0; i<numPieces; i++){
+            for(int i = 0; i< numPieces; i++){
                 fileOutputStream.write(file[i]);
             }
         } catch (FileNotFoundException fileNotFoundException) {
-            System.out.println("FileNotFoundException while saving downloaded file to disk.");
             fileNotFoundException.printStackTrace();
         } catch (IOException ioException) {
-            System.out.println("IOException while writing pieces to file.");
             ioException.printStackTrace();
         } finally {
             if(fileOutputStream != null) {
@@ -426,19 +413,10 @@ public class Peer {
                     fileOutputStream.flush();
                     fileOutputStream.close();
                 } catch(IOException ioException) {
-                    System.out.println("IOException while closing file output stream");
                     ioException.printStackTrace();
                 }
             }
         }
     }
-
-    // public void updateDownloadedByte(int bytes){
-    //     this.bytesDownloaded += bytes;
-    // }
-
-    // public void updatePieceNumDownloaded(){
-    //     this.piecesDownloaded++;
-    // }
 
 }

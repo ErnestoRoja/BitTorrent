@@ -5,3 +5,5 @@ for /r %%i in (*.class) do (
 )
 
 javac peerProcess.java
+
+cls

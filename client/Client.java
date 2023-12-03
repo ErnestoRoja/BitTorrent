@@ -16,7 +16,7 @@ public class Client {
     private ObjectOutputStream outputStream;
     private ObjectInputStream inputStream;
 
-    public Client(Peer host, Peer target){
+    public Client(Peer host, Peer target) {
         this.hostPeer = host;
         this.peerToConnectTo = target;
     }
@@ -31,21 +31,12 @@ public class Client {
 
             // Instantiate a message handler to control incoming and outgoing messages
             messageManager manager = new messageManager(inputStream, outputStream, hostPeer, socket);
-            System.out.println("Host PeerID [" + this.hostPeer.peerID + "] manager's peerID is being set to: " + this.peerToConnectTo.peerID);
             manager.setManagerPeerID(this.peerToConnectTo.peerID);
 
             // Instantiate the handler on its own thread
             Thread serverThread = new Thread(manager);
             serverThread.start();
-        }
-        catch (ConnectException e) {
-            System.out.println("Connection refused. You need to initiate a server first.");
-        }
-        catch(UnknownHostException unknownHost){
-            System.out.println("You are trying to connect to an unknown host!");
-        }
-        catch(IOException e){
-            System.out.println("IOException when trying to start the client.");
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
