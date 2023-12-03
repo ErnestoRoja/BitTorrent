@@ -19,6 +19,10 @@ Before compiling this project, ensure that you have the following prerequisites 
 
 ### Contributors:
 - Ernesto Roja
+Implemented the peer process along with the client and server. Also worked on the main functionality for the peer class that is used extensively
+throughout the program.
 - Robert Fontan
+Implemented the functionality for peer's to communicate via messages, that includes: request, have, not interested, interested, and piece.
 - Frank Sabates
-
+Created all the logger functionality and added the appropriate logging needed within the program's main code. Also created the functionality
+creating peer directories within the root and storing the logs in the appropriate location.
