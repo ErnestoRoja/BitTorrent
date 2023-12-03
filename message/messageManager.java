@@ -35,6 +35,39 @@ public class messageManager implements Runnable {
         logger = new WritingLogger(peer);
     }
 
+    public void setManagerPeerID(int id) {
+        this.targetPeerId = id;
+    }
+
+    public void run() {
+        // executed when thread.start() is run
+        // peer send handshake message to target
+        try {
+            byte[] handshakeMessage = new byte[0];
+            handshakeMessage = creator.handshakeMessage(peer.peerID);
+            peer.sendMessage(handshakeMessage, outputStream, targetPeerId);
+            System.out.println("targetPeerID being shaken with: " + targetPeerId);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+
+        // if peer + neightbors DO NOT have file -> System.exit(0)
+
+        while (true) {
+            if (peer.hasFile == 1 && peer.checkNeighborFiles()) { // add check for neighbors having file
+                System.exit(0);
+            }
+            try {
+
+                byte[] receivedMessage = (byte[]) inputStream.readObject();
+                readMessage(receivedMessage);
+
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+        }
+    }
+
     public void readBitfieldMessage(byte[] message) throws IOException { // 5
 
         byte[] messagePayload = new byte[message.length - 5];
@@ -207,26 +240,15 @@ public class messageManager implements Runnable {
         if (handShakeString.equals("P2PFILESHARINGPROJ")) {
             byte[] peerId = new byte[4];
             System.arraycopy(message, 28, peerId, 0, 4);
-            int peerIdInt = ByteBuffer.wrap(peerId).getInt();
-
-            /*
-             * Test Print Statement:
-             * System.out.println("Peer " + peer.peerID +
-             * " received the handshake message from Peer " + peerIdInt);
-             */
-
-            targetPeerId = peerIdInt;
+            
             // logger.connectedFromPeer(peer.peerID, targetPeerId);
+            System.out.println("peerID being targeted in handshake: " + targetPeerId);
             logger.handShake(peer.peerID, targetPeerId);
-
             try {
                 peer.sendMessage(creator.bitfieldMessage(peer.bitField), outputStream, targetPeerId);
             } catch (IOException e) {
                 System.out.println(e);
             }
-
-            peer.manager.get(targetPeerId).outputStream = outputStream;
-
         }
     }
 
@@ -273,34 +295,5 @@ public class messageManager implements Runnable {
                 readHandshakeMessage(message);
 
         }
-    }
-
-    public void run() {
-        // executed when thread.start() is run
-        // peer send handshake message to target
-        try {
-            byte[] handshakeMessage = new byte[0];
-            handshakeMessage = creator.handshakeMessage(peer.peerID);
-            peer.sendMessage(handshakeMessage, outputStream, targetPeerId);
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-
-        // if peer + neightbors DO NOT have file -> System.exit(0)
-
-        while (true) {
-            if (peer.hasFile == 1) { // add check for neighbors having file
-                System.exit(0);
-            }
-            try {
-
-                byte[] receivedMessage = (byte[]) inputStream.readObject();
-                readMessage(receivedMessage);
-
-            } catch (Exception e) {
-                System.out.println(e);
-            }
-        }
-
     }
 }

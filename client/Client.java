@@ -31,6 +31,8 @@ public class Client {
 
             // Instantiate a message handler to control incoming and outgoing messages
             messageManager manager = new messageManager(inputStream, outputStream, hostPeer, socket);
+            System.out.println("Host PeerID [" + this.hostPeer.peerID + "] manager's peerID is being set to: " + this.peerToConnectTo.peerID);
+            manager.setManagerPeerID(this.peerToConnectTo.peerID);
 
             // Instantiate the handler on its own thread
             Thread serverThread = new Thread(manager);
