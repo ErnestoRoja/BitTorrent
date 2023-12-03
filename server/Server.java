@@ -39,14 +39,10 @@ public class Server implements Runnable {
 
                 inputStream = new ObjectInputStream(socket.getInputStream());
 
-                // create message handler this will handle dealing with incoming messages as
-                // well as sending responses to messages
-                System.out.println("Creating message handler");
-                messageManager handler = new messageManager(inputStream, outputStream, peer, socket); 
-                // peer.setOut(out);
+                messageManager manager = new messageManager(inputStream, outputStream, peer, socket); 
 
                 // start handler on thread
-                Thread serverThread = new Thread(handler);
+                Thread serverThread = new Thread(manager);
                 serverThread.start();
             }
         } catch (IOException e) {

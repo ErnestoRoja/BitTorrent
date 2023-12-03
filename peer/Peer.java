@@ -178,7 +178,7 @@ public class Peer {
         this.logger = new WritingLogger(manager.get(this.peerID));
     }
 
-    public void sendMessage(byte [] message, ObjectOutputStream outputStream, int targetPeerId){
+    public void sendMessage(byte [] message, ObjectOutputStream outputStream){
         try{
             outputStream.writeObject(message);
             outputStream.flush();
