@@ -115,6 +115,16 @@ public class Peer {
         peerDirectory();
     }
 
+    public boolean checkNeighborFiles() {
+        for (int curr : manager.keySet()) {
+            if (manager.get(curr).bitField.nextClearBit(0) != numPieces) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // Creates a subdirectory for each peer and saves the peer's files into the newly created folder.
     public void peerDirectory() {
         // Initialize fileOutputStream to null to ensure it can be closed safely in the 'finally' block.
@@ -168,7 +178,7 @@ public class Peer {
         this.logger = new WritingLogger(manager.get(this.peerID));
     }
 
-    public void sendMessage(byte [] message, ObjectOutputStream outputStream, int targetPeerId){
+    public void sendMessage(byte [] message, ObjectOutputStream outputStream){
         try{
             outputStream.writeObject(message);
             outputStream.flush();

@@ -75,16 +75,19 @@ public class peerProcess {
 
         for (Map.Entry<Integer, Peer> entry : peers.entrySet()) {
             int currPeerID = entry.getKey();
+            System.out.println("peerProcess peerID: " + peers.get(peerID).peerID);
+            System.out.println("PeerID being iterated over: " + currPeerID);
             
             // Assuming that the peerID's are in increasing order within the config files
             if (currPeerID < peerID) {
+                System.out.println("Client being created with host [" + peers.get(peerID).peerID + "] and target [" + entry.getValue().peerID + "]");
                 Client client = new Client(peers.get(peerID), entry.getValue());
                 client.connect();
                 logger.tcpConnect(peerID, currPeerID);
                 logger.connect(peerID, currPeerID);
             }
         }
-        peers.get(peerID).startChokeThread();
+        //peers.get(peerID).startChokeThread();
         // peers.get(peerID).unchokePeer();
     }
 }
